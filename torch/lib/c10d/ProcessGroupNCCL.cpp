@@ -10,6 +10,8 @@
 #include <c10/cuda/CUDAGuard.h>
 
 #include <c10d/Utils.hpp>
+
+#include <chrono>
 namespace c10d {
 
 constexpr const char* const kNCCLAbortedCommStoreKey = "NCCLABORTEDCOMM";
@@ -166,6 +168,9 @@ ncclResult_t ncclAlltoall(
     ncclDataType_t type,
     ncclComm_t comm,
     cudaStream_t stream) {
+      auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      std::cout<<"Alltoall work started at "<< currTime<<std::endl;
+
   int numranks;
   size_t rankdiff = count * size;
   C10D_NCCL_CHECK(ncclCommCount(comm, &numranks));
@@ -181,6 +186,8 @@ ncclResult_t ncclAlltoall(
     }
   }
   C10D_NCCL_CHECK(ncclGroupEnd());
+  currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  std::cout<<"Alltoall work finished at "<< currTime<<std::endl;
   return ncclSuccess;
 }
 
@@ -195,6 +202,8 @@ ncclResult_t ncclAlltoallv(
     ncclDataType_t type,
     ncclComm_t comm,
     cudaStream_t stream) {
+      auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      std::cout<<"Alltoallv work started at "<< currTime<<std::endl;
   int numranks;
   C10D_NCCL_CHECK(ncclCommCount(comm, &numranks));
   C10D_NCCL_CHECK(ncclGroupStart());
@@ -221,6 +230,8 @@ ncclResult_t ncclAlltoallv(
     }
   }
   C10D_NCCL_CHECK(ncclGroupEnd());
+  currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  std::cout<<"Alltoallv work finished at "<< currTime<<std::endl;
   return ncclSuccess;
 }
 #endif
@@ -1023,10 +1034,9 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::allreduce(
     std::vector<at::Tensor>& tensors,
     const AllreduceOptions& opts) {
   check_gpu_tensors(tensors);
-
-  return collective(
-      tensors,
-      tensors,
+  auto ptr = collective(
+          tensors,
+          tensors,
       [&](at::Tensor& input,
           at::Tensor& output,
           ncclComm_t comm,
@@ -1040,6 +1050,9 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::allreduce(
             comm,
             stream.stream());
       });
+      auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      std::cout<<"Allreduce work "<<ptr.get()<<" started at "<< currTime<<std::endl;
+      return ptr;
 }
 
 std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::allreduce_coalesced(

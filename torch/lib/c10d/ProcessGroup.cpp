@@ -1,6 +1,7 @@
 #include <c10d/ProcessGroup.hpp>
 
 #include <c10/util/Logging.h>
+#include <chrono>
 
 namespace c10d {
 
@@ -67,6 +68,8 @@ void ProcessGroup::Work::finish(std::exception_ptr exception) {
   std::unique_lock<std::mutex> lock(mutex_);
   completed_ = true;
   exception_ = exception;
+  auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  std::cout<<"Work "<<this<<" finished at "<< currTime<<std::endl;
   lock.unlock();
   cv_.notify_all();
 }
