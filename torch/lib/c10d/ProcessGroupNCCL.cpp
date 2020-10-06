@@ -168,8 +168,6 @@ ncclResult_t ncclAlltoall(
     ncclDataType_t type,
     ncclComm_t comm,
     cudaStream_t stream) {
-      auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-      std::cout<<"Alltoall work started at "<< currTime<<std::endl;
 
   int numranks;
   size_t rankdiff = count * size;
@@ -186,8 +184,7 @@ ncclResult_t ncclAlltoall(
     }
   }
   C10D_NCCL_CHECK(ncclGroupEnd());
-  currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  std::cout<<"Alltoall work finished at "<< currTime<<std::endl;
+  
   return ncclSuccess;
 }
 
@@ -202,8 +199,6 @@ ncclResult_t ncclAlltoallv(
     ncclDataType_t type,
     ncclComm_t comm,
     cudaStream_t stream) {
-      auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-      std::cout<<"Alltoallv work started at "<< currTime<<std::endl;
   int numranks;
   C10D_NCCL_CHECK(ncclCommCount(comm, &numranks));
   C10D_NCCL_CHECK(ncclGroupStart());
@@ -230,8 +225,6 @@ ncclResult_t ncclAlltoallv(
     }
   }
   C10D_NCCL_CHECK(ncclGroupEnd());
-  currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  std::cout<<"Alltoallv work finished at "<< currTime<<std::endl;
   return ncclSuccess;
 }
 #endif
@@ -391,8 +384,12 @@ void ProcessGroupNCCL::WorkNCCL::synchronizeInternal(
 
 // Same as calling synchronize().
 bool ProcessGroupNCCL::WorkNCCL::wait(std::chrono::milliseconds timeout) {
+  auto startTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  // std::cout<<"Work "<<this<<" finished at "<< startTime <<std::endl<<std::flush;
   synchronizeInternal(timeout);
   // Always return true, because abort API is not implemented.
+  auto currTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  std::cout<<"Work "<<this<<" finished at "<< currTime<< ", blocked for "<<currTime-startTime<<" nanoseconds"<<std::endl<<std::flush;
   return true;
 }
 
@@ -1050,8 +1047,8 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::allreduce(
             comm,
             stream.stream());
       });
-      auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-      std::cout<<"Allreduce work "<<ptr.get()<<" started at "<< currTime<<std::endl;
+      auto currTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+      std::cout<<"Allreduce work "<<ptr.get()<<" started at "<< currTime<<std::endl<<std::flush;
       return ptr;
 }
 
@@ -1257,7 +1254,8 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::alltoall_base(
   if (outputSplitSizes.size() == 0 && inputSplitSizes.size() == 0) {
     std::vector<at::Tensor> inputTensors = {inputTensor};
     std::vector<at::Tensor> outputTensors = {outputTensor};
-    return collective(
+    
+    auto ptr =  collective(
         inputTensors,
         outputTensors,
         [&](at::Tensor& input,
@@ -1273,6 +1271,9 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::alltoall_base(
               comm,
               stream.stream());
         });
+        auto currTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        std::cout<<"Alltoall work "<<ptr.get()<<" started at "<< currTime<<std::endl<<std::flush;
+        return ptr;
   } else {
     c10d::checkSplitSizes(inputSplitSizes, inputTensor, size_);
     c10d::checkSplitSizes(outputSplitSizes, outputTensor, size_);

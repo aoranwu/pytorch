@@ -53,6 +53,8 @@ bool ProcessGroup::Work::wait(std::chrono::milliseconds timeout) {
   }
   synchronize();
   // Always return true, because abort API is not implemented.
+  // auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  // std::cout<<"Work in parent wait "<<this<<" finished at "<< currTime<<std::endl<<std::flush;
   return true;
 }
 
@@ -68,8 +70,8 @@ void ProcessGroup::Work::finish(std::exception_ptr exception) {
   std::unique_lock<std::mutex> lock(mutex_);
   completed_ = true;
   exception_ = exception;
-  auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  std::cout<<"Work "<<this<<" finished at "<< currTime<<std::endl;
+  // auto currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  // std::cout<<"Work "<<this<<" finished at "<< currTime<<std::endl;
   lock.unlock();
   cv_.notify_all();
 }
