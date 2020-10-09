@@ -12,6 +12,9 @@
 #include <c10d/Utils.hpp>
 
 #include <chrono>
+#include <sys/types.h>
+#include <unistd.h>
+
 namespace c10d {
 
 constexpr const char* const kNCCLAbortedCommStoreKey = "NCCLABORTEDCOMM";
@@ -384,12 +387,13 @@ void ProcessGroupNCCL::WorkNCCL::synchronizeInternal(
 
 // Same as calling synchronize().
 bool ProcessGroupNCCL::WorkNCCL::wait(std::chrono::milliseconds timeout) {
+  pid_t pid = getpid();
   auto startTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   // std::cout<<"Work "<<this<<" finished at "<< startTime <<std::endl<<std::flush;
   synchronizeInternal(timeout);
   // Always return true, because abort API is not implemented.
   auto currTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  std::cout<<"Work "<<this<<" finished at "<< currTime<< ", blocked for "<<currTime-startTime<<" nanoseconds"<<std::endl<<std::flush;
+  std::cout<<"Work "<<this<<" in process "<< pid<<" finished at "<< currTime<< ", blocked for "<<currTime-startTime<<" nanoseconds"<<std::endl<<std::flush;
   return true;
 }
 
@@ -1048,7 +1052,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::allreduce(
             stream.stream());
       });
       auto currTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-      std::cout<<"Allreduce work "<<ptr.get()<<" started at "<< currTime<<std::endl<<std::flush;
+      std::cout<<"Allreduce work "<<ptr.get()<<" in process "<<getpid()<<" started at "<< currTime<<std::endl<<std::flush;
       return ptr;
 }
 
@@ -1272,7 +1276,7 @@ std::shared_ptr<ProcessGroup::Work> ProcessGroupNCCL::alltoall_base(
               stream.stream());
         });
         auto currTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        std::cout<<"Alltoall work "<<ptr.get()<<" started at "<< currTime<<std::endl<<std::flush;
+        std::cout<<"Alltoall work "<<ptr.get()<<" in process "<<getpid()<<" started at "<< currTime<<std::endl<<std::flush;
         return ptr;
   } else {
     c10d::checkSplitSizes(inputSplitSizes, inputTensor, size_);
